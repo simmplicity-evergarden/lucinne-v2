@@ -1,0 +1,4 @@
+discord.py
+configparser
+requests
+python-dotenv

@@ -1,11 +1,13 @@
 # Authentication file
 authentication.ini
 # Ignore pickle files
-*.pickle
+pickles/
 # Ignore large binary files
 resources/paws
 # Ignore rx commission file
 cogs/rx.py
+# Logs
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

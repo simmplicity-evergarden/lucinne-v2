@@ -1,0 +1,58 @@
+ I am > This unit is 
+ I like > This unit appreciates 
+ I want > This unit desires 
+ I need > This unit requires 
+ I have > This unit has 
+ I'll > This unit will 
+ I'd done > This unit had done 
+ I'd tried > This unit had tried 
+ I'd considered > This unit had considered 
+ I'd thought > This unit had thought 
+ I'd > This unit would 
+ I'm > This unit is 
+ I've > This unit has 
+ I > This unit 
+ That's > That is 
+ Can't it > Can it not 
+ Won't it > Will it not 
+ Shan't it > Shall it not 
+n't it > it not 
+ Can't > Cannot 
+ Won't > Will not 
+ Shan't > Shall not 
+n't > not 
+ My > This unit's 
+ Me > This unit 
+ Myself > Itself 
+ It's got  > It has got 
+ Its got > It has got 
+ It's > It is 
+ Its going > It is going 
+'ll > will 
+'re > are 
+'ve > have 
+ Gonna > going to 
+ Wanna > want to 
+ Imma > This unit is going to 
+ Betcha > Bet you 
+ Don'tcha > Do you not 
+ Wouldya > Would you 
+ Didja > Did you 
+ Yeah > Yes 
+ Nope > Negatory 
+ Nah > Negatory
+ Negative > Negatory
+ No > Negatory
+ Oki > Okay 
+ Yah > Yes 
+ There's > There is 
+ Here's > Here is 
+ Where's > Where is 
+ Now's > Now is 
+ Why's > Why is 
+ How's > How is 
+ What's > What is 
+ Whats > What is 
+ Wheres > Where is 
+ Whos > Whose 
+ Who's > Who is 
