@@ -14,7 +14,7 @@ import guilds
 from webhooks import get_or_make_webhook
 # File to get the message texts from
 
-logger = logging.getLogger('bot.feral')
+logger = logging.getLogger('bot.squeak')
 
 class Squeak_Cog(commands.Cog):
 	class Squeak_Affliction():
