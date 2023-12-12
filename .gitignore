@@ -4,8 +4,11 @@ authentication.ini
 pickles/
 # Ignore large binary files
 resources/paws
+resources/rx
 # Ignore rx commission file
 cogs/rx.py
+# Ignore shocks file
+cogs/shocks.py
 # Logs
 logs/
 
