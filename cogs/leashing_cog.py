@@ -10,6 +10,7 @@ import logging
 from string import ascii_uppercase
 #from random import randint
 from random import choices
+from random import choice
 from typing import Literal
 from typing import Optional
 from helpers import *
@@ -93,17 +94,21 @@ class Leashing_Cog(commands.Cog):
 
 	# Update leashed users
 	async def on_message(self, message: discord.Message):
-		logger.debug(f"{message.author} spoke in leash_holder.id")
 		await self.move_leashed_users(message.guild, message.channel, message.author, freed = False)
+
+
+
+
+
 
 	# Safeword
 	async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member):
 		# This should only be called when safewording, so only safewording logic here
 		bot_guild = guilds.bot_guilds[str(reaction.message.guild.id)]
-		for leash_mapping in bot_guild.leash_map:
+		for leash_mapping in bot_guild.leash_map.values():
 			# Remove existing leash
-			if member.id in self.leash_mapping[leasher]:
-				await self.remove_user_from_leash(reaction.message.guild, await find_member(self.bot, leash_mapping.leash_holder), reaction.message.guild, member)
+			if member.id in leash_mapping.users_leashed:
+				await self.remove_user_from_leash(reaction.message.guild, await find_member(self.bot, leash_mapping.leash_holder, reaction.message.guild.id), member)
 				logger.info(f"Removed {member.name} from leash in {reaction.message.guild.name}")
 				return
 
@@ -157,8 +162,17 @@ class Leashing_Cog(commands.Cog):
 
 	# Fix channel permissions for all leashed members of a given leash holder
 	async def move_leashed_users(self, guild: discord.Guild, allowed_channel: discord.channel, leash_holder: discord.Member, freed = False):
-		# Get list of leashed members
-		leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
+		try:
+			# Get list of leashed members
+			leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
+		except:
+			return
+
+		# Small check for empty lists
+		if len(leash_mapping.users_leashed) == 0:
+			del guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
+
+
 		# Avoid updating if already in the right place
 		if leash_mapping.last_channel == allowed_channel.id and not freed:
 			return
@@ -185,3 +199,7 @@ class Leashing_Cog(commands.Cog):
 				await channel.set_permissions(target_member, overwrite = None)
 			else:
 				await channel.set_permissions(target_member, overwrite = no_perms)
+
+async def setup(bot):
+	await bot.add_cog(Leashing_Cog(bot))
+

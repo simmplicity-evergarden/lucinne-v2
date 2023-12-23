@@ -43,3 +43,8 @@ class Rename_Cog(commands.Cog):
 		await inter.response.send_message(f'{inter.user.display_name} has renamed {old_nick} to {nickname}.~', ephemeral=False)
 		logger.info(f'{inter.user.display_name} changed {target_member.display_name}\'s nickname to {nickname}.')
 		return
+
+
+async def setup(bot):
+	await bot.add_cog(Rename_Cog(bot))
+

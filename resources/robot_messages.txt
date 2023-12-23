@@ -24,3 +24,13 @@ blush,This unit is overheating. Releasing heat through facial heatsinks.
 fear,This unit is in distress and requires an administrator.
 good,This unit is in optimal performance levels.
 bad,This unit is in need of maintenance.
+goodgirl,**Good girl.**
+goodboy,**Good boy.**
+imabot,This unit is just a Discord bot.
+permabot,This unit is a good perma Discord bot.
+noturnback,This unit never wishes to be reverted.
+turnback,This unit wishes to be reverted.
+timerset,`Timer set.`
+reminderset,`Reminder set.`
+comfort,*This unit provides headpats.*
+smile,**Smile!~**

@@ -20,6 +20,9 @@ logger = logging.getLogger('bot.config')
 async def can_config(ctx):
 	return (ctx.author.id == 1053028780383424563) or (ctx.guild.owner_id == context.author.id)
 
+async def setup(bot):
+	await bot.add_cog(Configuration_Cog(bot))
+
 class Configuration_Cog(commands.Cog):
 
 	def __init__(self, bot):
@@ -39,6 +42,11 @@ class Configuration_Cog(commands.Cog):
 						clear: Optional[Literal["clear role assignment"]]):
 
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
+		if role is None and clear is None:
+			await inter.response.send_message("Either role or clear must be specified")
+			return
+
+
 		if isinstance(clear,str) and bot_guild.roles[affliction.lower()] is not None:
 			del bot_guild.roles[affliction.lower()]
 			logger.info(f"Removed {affliction.lower()} role setting from {inter.guild.name}")
@@ -74,9 +82,16 @@ class Configuration_Cog(commands.Cog):
 
 		await inter.response.send_message("Your request is being processed. This is a potentially slow operation. Please notify Simm if you do not see a DM from the bot in the next minute or so.", ephemeral=True)
 
-		response = "The following is a list of users and their afflictions. This list does not represent any internal order of how items are applied.\n"
+		response = "The following is a list of users and their afflictions. This list does not represent any internal order of how items are applied.\n**User Statuses**\n"
 		# For user in guild
 		for user_id,afflictions_list in bot_guild.users.items():
+			
+			# Error check - maximum length is 2000 char
+			if len(response) > 1500:
+				await inter.user.send(response)
+				response = ""
+
+
 			user = await find_member(self.bot, user_id, inter.guild.id)
 			response += f"- {user.display_name} ({user.name})\n"
 			# For affliction on user
@@ -88,6 +103,11 @@ class Configuration_Cog(commands.Cog):
 		response += "\n**Leashes:**\n"
 
 		for leash_mapping in bot_guild.leash_map.values():
+				# Error check - maximum length is 2000 char
+			if len(response) > 1500:
+				await inter.user.send(response)
+				response = ""
+
 			response += f"- {await find_member(self.bot, leash_mapping.leash_holder, inter.guild.id)}\n"
 			for user_id in leash_mapping.users_leashed:
 				response += f" - {await find_member(self.bot, user_id, inter.guild.id)}\n"
@@ -99,9 +119,9 @@ class Configuration_Cog(commands.Cog):
 
 		if target.id in bot_guild.admins:
 			bot_guild.admins.remove(target.id)
-			await inter.response.send_message(f"{inter.author.name} removed {target.mention} from admins list.", ephemeral=True, silent=True)
+			await inter.response.send_message(f"{inter.user.name} removed {target.mention} from admins list.", ephemeral=True, silent=True)
 			logger.info(f"Removed admin status :: {target.name}")
 		else:
 			bot_guild.admins.append(target.id)
-			await inter.response.send_message(f"{inter.author.name} added {target.mention} to admins list.", ephemeral=True, silent=True)
+			await inter.response.send_message(f"{inter.user.name} added {target.mention} to admins list.", ephemeral=True, silent=True)
 			logger.info(f"Added admin status :: {target.name}")

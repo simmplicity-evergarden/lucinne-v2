@@ -1,6 +1,7 @@
 from discord.ext import tasks, commands
 from discord import app_commands
 from discord import ui
+from cogs.squeak_censor_cog import censor_message
 import re
 import os
 import discord
@@ -63,6 +64,10 @@ class Squeak_Cog(commands.Cog):
 		smile_required: Optional[bool] = None,
 		clear: Optional[Literal["clear"]] = None):
 
+		if inter.user.id == target.id:
+			await inter.response.send_message("You cannot use this command on yourself, squeaky toy.")
+			return
+
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 
 		affliction = None
@@ -117,19 +122,19 @@ class Squeak_Cog(commands.Cog):
 		show_tease = False
 
 		# Smile enforcer
-		if affliction.smile_required and re.search(r"\*\*Smil(?:e(?:s)?|ing)!~\*\*",message.content) == None:
+		if affliction.smile_required and re.search(r"\*\*Smil(?:e(?:s)?|ing)!~\*\*",censor_message(message.content)) == None:
 			# Tease on error, ~5% chance
 			show_tease = randint(0,20) == 1
 			# Replace message
-			wm_content = squeak_message(message.content, chance=100)
+			wm_content = squeak_message(censor_message(message.content), chance=100)
 		# Full sentence replacer
 		elif randint(0,99) < affliction.msg_squeak_chance:
-			wm_content = squeak_message(message.content, chance=100)
+			wm_content = squeak_message(censor_message(message.content), chance=100)
 		else:
-			wm_content = squeak_message(message.content, chance=affliction.word_squeak_chance)
+			wm_content = squeak_message(censor_message(message.content), chance=affliction.word_squeak_chance)
 
 		# Avoid unnecessary replacements or deletions.
-		if wm_content == None or wm_content == message.content:
+		if wm_content == None or wm_content.strip() == message.content.strip():
 			return
 
 		await message.delete()
@@ -152,14 +157,14 @@ class Squeak_Cog(commands.Cog):
 	async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member):
 		# Get pre-existing affliction, if it exists
 		affliction = None
-		bot_guild = guilds.bot_guilds[str(reaction.message.guild_id)]
+		bot_guild = guilds.bot_guilds[str(reaction.message.guild.id)]
 		if bot_guild.users.get(member.id, None) is not None:
 			affliction = next(filter(
 				lambda x: type(x).__name__ == self.Squeak_Affliction.__name__,
 				bot_guild.users[member.id]
 			));
 
-		print(f"{reaction} {member}")
+		print("")
 
 		# Set defaults
 		smile_required, word_squeak_chance, msg_squeak_chance = (None,None,None)
@@ -216,3 +221,8 @@ def squeak_word(word) -> str:
 				return '**Smile!**'
 			case 7:
 				return 'Rosa'
+
+
+async def setup(bot):
+	await bot.add_cog(Squeak_Cog(bot))
+

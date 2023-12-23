@@ -8,15 +8,17 @@ class Sync_Guilds_Cog(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.synchronize_guilds_shelf.start()
+		logger.info("Guild shelf sync started")
 
 	def cog_unload(self):
 		self.synchronize_guilds_shelf.cancel()
 
 	@tasks.loop(seconds=30.0)
 	async def synchronize_guilds_shelf(self):
-		# Doing this because I think it's necessary for it to save properly
-		for key,value in guilds.bot_guilds.items:
-			guilds.bot_guilds[key] = value
-
+		logger.info("Begin shelf sync")
 		guilds.bot_guilds.sync()
-		logger.debug("Ran shelve sync")
+		logger.info("Finished shelf sync")
+
+async def setup(bot):
+	await bot.add_cog(Sync_Guilds_Cog(bot))
+

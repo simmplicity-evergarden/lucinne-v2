@@ -63,3 +63,8 @@ class Role_Manager_Cog(commands.Cog):
 
 	async def return_perms(self, guild: discord.Guild, member: discord.Member):
 		bot_guild = guilds.bot_guilds[str(guild.id)]
+
+
+async def setup(bot):
+	await bot.add_cog(Role_Manager_Cog(bot))
+

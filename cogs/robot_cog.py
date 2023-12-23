@@ -1,6 +1,7 @@
 from discord.ext import tasks, commands
 from discord import app_commands
 #import re
+from cogs.squeak_censor_cog import censor_message
 import os
 import discord
 import logging
@@ -51,6 +52,11 @@ class Robot_Cog(commands.Cog):
 						strict_mode: Optional[bool] = False,
 						clear: Optional[Literal["clear"]] = None):
 
+		if inter.user.id == target.id:
+			await inter.response.send_message("You cannot use this command on yourself, bot.")
+			return
+
+
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 
 		affliction = self.Robot_Affliction(strict_mode)
@@ -98,7 +104,7 @@ class Robot_Cog(commands.Cog):
 				wm_message = self.responses[message_content.strip()]
 
 		else:
-			wm_message = message.content
+			wm_message = censor_message(message.content)
 
 		# Delete old message
 		await message.delete()
@@ -107,3 +113,8 @@ class Robot_Cog(commands.Cog):
 			# Send new message
 			webhook = await get_or_make_webhook(message.guild, message.channel)
 			await webhook.send(wm_message, username=message.author.display_name, avatar_url=message.author.display_avatar.url, silent=True)
+
+
+async def setup(bot):
+	await bot.add_cog(Robot_Cog(bot))
+

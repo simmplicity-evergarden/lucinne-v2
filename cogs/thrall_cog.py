@@ -19,10 +19,9 @@ from webhooks import get_or_make_webhook
 # Rosa ID
 rosa_id = 153857426813222912
 
+THRALL_ENABLED_KEY = "thrall_enabled"
 
 # Thrall role ID: 1125452920301834250
-
-
 mantra_file_location = os.path.join(os.path.dirname(__file__),"..","resources","mantras.txt")
 
 logger = logging.getLogger('bot.thrall')
@@ -67,7 +66,9 @@ class Thrall_Cog(commands.Cog):
 		for guild in guilds.bot_guilds.values():
 			if guild.users is None:
 				continue
-			for user_id,affliction_list in guild.users.items():
+
+			copy_of_users = dict(guild.users).items()
+			for user_id,affliction_list in copy_of_users:
 				afflictions = list(filter(
 					lambda x: type(x) == self.Thrall_Affliction,
 					affliction_list))
@@ -89,16 +90,34 @@ class Thrall_Cog(commands.Cog):
 					self.Thrall_Affliction()
 					)
 
+	# Thrall "leash"
+	@app_commands.command(description='Toggle global thrall enabled')
+	async def toggle_thrall_global(self, inter: discord.Interaction):
+		# Prevent rosa from self-thralling
+		#if await is_rosa(target):
+		#	return
+		bot_guild = guilds.bot_guilds[str(inter.guild.id)]
+
+		new_setting = not bot_guild.settings.get(THRALL_ENABLED_KEY, True)
+
+		bot_guild.settings[THRALL_ENABLED_KEY] = new_setting
+
+		await inter.response.send_message(f"global thrall setting is now {new_setting}",ephemeral=True)
+
 
 	# Thrall "leash"
 	@app_commands.command(description='Entrall the target')
 	async def afflict_thrall(self, inter: discord.Interaction, target: discord.Member, clear: Optional[Literal["clear"]] = None):
 		# Prevent rosa from self-thralling
-		if await is_rosa(target):
-			return
+		#if await is_rosa(target):
+		#	return
 
 		# Prevent bot from thralling itself
 		if await is_bot(self.bot, target):
+			return
+
+		if inter.user.id == target.id and clear == None:
+			await inter.response.send_message("You cannot use this command on yourself, thrall.")
 			return
 
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
@@ -155,14 +174,22 @@ class Thrall_Cog(commands.Cog):
 
 	async def on_owner_mention(self, message):
 		# Prevent rosa from self-thralling
-		if await is_rosa(message.author):
-			return
+		#if await is_rosa(message.author):
+		#	return 
 
+		# od exemption
+		if message.author.id == 201821870255898625:
+			return
+			
 		# Prevent bot from thralling itself
 		if await is_bot(self.bot, message.author):
 			return
 
 		bot_guild = guilds.bot_guilds[str(message.guild.id)]
+
+		# If the feature is turned off
+		if not bot_guild.settings.get(THRALL_ENABLED_KEY, True):
+			return;
 
 		thrall_duration = 40
 
@@ -177,8 +204,6 @@ class Thrall_Cog(commands.Cog):
 	async def on_message(self, message):
 
 
-		print("yolo")
-
 		# Get user's affliction settings
 		user_list = guilds.bot_guilds[str(message.guild.id)].users
 		# To get here, the user must already have the setting,
@@ -192,10 +217,7 @@ class Thrall_Cog(commands.Cog):
 		if randint(0,99) > affliction.replace_chance:
 			return
 
-		wm_content = self.get_mantra()
-
-		print(wm_content)
-
+		wm_content = self.get_mantra().strip()
 		await message.delete()
 		webhook = await get_or_make_webhook(message.guild, message.channel)
 		webhook_msg = await webhook.send(
@@ -207,3 +229,7 @@ class Thrall_Cog(commands.Cog):
 	# Modify messages
 	def get_mantra(self):
 		return choice(self.mantras)
+
+async def setup(bot):
+	await bot.add_cog(Thrall_Cog(bot))
+

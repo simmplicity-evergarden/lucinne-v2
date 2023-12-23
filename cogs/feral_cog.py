@@ -6,11 +6,13 @@ import os
 import discord
 import logging
 #from random import randint
-from random import choices
 from random import randint
+from random import choices
+from random import choice
 from typing import Literal
 from typing import Optional
 import guilds
+from cogs.squeak_censor_cog import censor_message
 from webhooks import get_or_make_webhook
 import re
 # File to get the message texts from
@@ -70,6 +72,11 @@ class Feral_Cog(commands.Cog):
 		# Load config
 		logger.info('Loaded Feral_Cog')
 
+		# Get list of paw pics
+		for filename in os.listdir(paw_pics_prefix):
+			self.paw_pics.append(os.path.join(paw_pics_prefix, filename))
+
+
 	@app_commands.command(description='Afflict feral on target')
 	@app_commands.describe(target = "affliction to assign a role to")
 	@app_commands.describe(vote_requirement = "required unlock votes")
@@ -81,6 +88,10 @@ class Feral_Cog(commands.Cog):
 		vote_requirement: Optional[app_commands.Range[int, 0]] = 3,
 		base_huff_chance: Optional[app_commands.Range[int, 0]] = 3,
 		clear: Optional[Literal["clear"]] = None):
+
+		if inter.user.id == target.id:
+			await inter.response.send_message("You cannot use this command on yourself, pawslut.")
+			return
 
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 
@@ -134,12 +145,12 @@ class Feral_Cog(commands.Cog):
 			for attachment in message.attachments:
 				if 'image' in attachment.content_type:
 					wm_files.append(discord.File(choice(self.paw_pics)))
-					#print('image!')
+					print('image!')
 
 		# If there is any text in the message
 		wm_content = message_modifier(message.content)
 
-
+		await message.delete()
 		webhook = await get_or_make_webhook(message.guild, message.channel)
 
 		last_message_webhook_msg = await webhook.send(
@@ -159,7 +170,7 @@ class Feral_Cog(commands.Cog):
 			self.message_saving_dict[last_message_webhook_msg.id] = \
 				self.Feral_Message(
 					message.author.id,
-					message.content,
+					censor_message(message.content),
 					affliction.vote_requirement,
 					affliction.base_huff_chance
 					)
@@ -203,19 +214,22 @@ class Feral_Cog(commands.Cog):
 				reaction_message.vote_score += (admin_modifier - 1) * negative_modifier
 				reaction_message.huff_chance -= 200 * negative_modifier
 
-		logger.debug(f"Feral message {reaction.message.id} now has vote={reaction_message.vote_score} huff={reaction_message.huff_chance}")
+		#logger.debug(f"Feral message {reaction.message.id} now has vote={reaction_message.vote_score} huff={reaction_message.huff_chance}")
 
 		# Scoring and replacing
 		if reaction_message.vote_score >= reaction_message.vote_requirement:
 
-			logger.debug(f"Feral message {reaction.message.id} now has vote={reaction_message.vote_score} huff={reaction_message.huff_chance}")
+			#logger.debug(f"Feral message {reaction.message.id} now has vote={reaction_message.vote_score} huff={reaction_message.huff_chance}")
 			# Get webhook
 			webhook = await get_or_make_webhook(reaction.message.guild, reaction.message.channel)
 
 			# Huff chance
 			dice_roll = randint(0,100)
+			print(dice_roll)
+			print(reaction_message.huff_chance)
+			print(dice_roll < reaction_message.huff_chance)
 			if dice_roll < reaction_message.huff_chance:
-				original_content = "***HUFFS PAWS HUFFS PAWS*** **AWOOO~**"
+				reaction_message.message = "***HUFFS PAWS HUFFS PAWS*** **AWOOO~**"
 
 			# double-check this because I think it's fucking with the API limits
 			# only affect messages in dict
@@ -281,3 +295,8 @@ def woof_length(word):
 				return '*growl*'
 			case 7:
 				return '*pants*'
+
+
+async def setup(bot):
+	await bot.add_cog(Feral_Cog(bot))
+

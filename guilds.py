@@ -15,7 +15,7 @@ if not os.path.exists(os.path.dirname(shelf_location)):
 bot_guilds = shelve.open(shelf_location, writeback=True)
 
 
-affliction_list = Literal["Robot","Feral","Squeak","Thrall"]
+affliction_list = Literal["Robot","Feral","Squeak","Thrall","Object"]
 
 logger = logging.getLogger('bot.guilds')
 
@@ -43,6 +43,9 @@ class Bot_Guild:
 	# Webhook for the server
 	webhook_name: str = ""
 
+	# extra server-specific settings; string-value pair 
+	settings = {}
+
 	# leash_holder_id : (last_channel_id, list[discord.Member])
 	leash_map = {}
 
@@ -59,6 +62,7 @@ class Bot_Guild:
 		self.webhook_name = ""
 		# Mapping of user IDs to leashed users
 		self.leash_map = {}
+		self.settings = {}
 
 	# Add affliction (and optionally role) to user
 	async def afflict_target(self, bot, target: Union[discord.Member, discord.User, int], affliction):
@@ -96,6 +100,10 @@ class Bot_Guild:
 		else:
 			# Remove pre-existing affliction from list, if any
 			self.users[target.id] = list(filter(lambda x: type(x).__name__ != affliction_type, self.users[target.id]))
+			# Remove empty users
+			if len(self.users[target.id]) == 0:
+				del self.users[target.id]
+
 
 		logger.info(f"AFFLICTION: Removed {affliction_type} to {target.name} in {self.guild_id}")
 
@@ -109,15 +117,13 @@ class Bot_Guild:
 		# convert to real user
 		target = await find_member(bot, target, self.guild_id)
 
-		print("yolyolo")
-
 		# Add to internal list
 		if target.id not in self.users:
 			# Add target to list
 			pass
 		else:
 			# Remove pre-existing affliction from list, if any
-			self.users[target.id] = []
+			del self.users[target.id]
 			logger.info(f"Cleared all afflictions from {target.name}")
 
 		for role in get_args(affliction_list):

@@ -5,16 +5,6 @@ import logging
 import guilds
 
 # Cogs import
-import cogs.common
-import cogs.rename_cog
-import cogs.role_manager_cog
-import cogs.thrall_cog
-import cogs.robot_cog
-import cogs.feral_cog
-import cogs.squeak_cog
-import cogs.leashing_cog
-import cogs.router
-import cogs.configuration_cog
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -35,16 +25,22 @@ logger = logging.getLogger('bot')
 async def on_ready():
 	logger.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
 	logger.info('---------------------------------------------')
-	await bot.add_cog(cogs.common.Common_Cog(bot))
-	await bot.add_cog(cogs.rename_cog.Rename_Cog(bot))
-	await bot.add_cog(cogs.role_manager_cog.Role_Manager_Cog(bot))
-	await bot.add_cog(cogs.configuration_cog.Configuration_Cog(bot))
-	await bot.add_cog(cogs.thrall_cog.Thrall_Cog(bot))
-	await bot.add_cog(cogs.robot_cog.Robot_Cog(bot))
-	await bot.add_cog(cogs.feral_cog.Feral_Cog(bot))
-	await bot.add_cog(cogs.squeak_cog.Squeak_Cog(bot))
-	await bot.add_cog(cogs.leashing_cog.Leashing_Cog(bot))
-	await bot.add_cog(cogs.router.SpeechRouter_Cog(bot))
+	await bot.load_extension("cogs.common")
+	await bot.load_extension("cogs.rename_cog")
+	await bot.load_extension("cogs.role_manager_cog")
+	await bot.load_extension("cogs.configuration_cog")
+	await bot.load_extension("cogs.thrall_cog")
+	await bot.load_extension("cogs.robot_cog")
+	await bot.load_extension("cogs.feral_cog")
+	await bot.load_extension("cogs.squeak_cog")
+	await bot.load_extension("cogs.object_cog")
+	await bot.load_extension("cogs.router")
+	await bot.load_extension("cogs.squeak_censor_cog")
+	await bot.load_extension("cogs.leashing_cog")
+	await bot.load_extension("cogs.rx")
+	await bot.load_extension("cogs.speak_as_member_cog")
+	await bot.load_extension("cogs.silly")
+	await bot.load_extension("cogs.shocks")
 	sync.start()
 
 @bot.event
@@ -55,6 +51,6 @@ async def on_guild_join(guild: discord.Guild):
 async def on_guild_remove(guild: discord.Guild):
 	guilds.remove_guild(guild)
 
-@tasks.loop(seconds=10)
+@tasks.loop(seconds=30)
 async def sync():
 	guilds.bot_guilds.sync()
