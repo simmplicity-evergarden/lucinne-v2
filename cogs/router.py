@@ -3,6 +3,7 @@ import discord
 import logging
 from guilds import bot_guilds
 import guilds
+import optout
 
 # The purpose of this cog is to prevent race conditions and code reuse for commonly
 # used events, namely on_message, on_reaction_add, and on_reaction_remove. Logic is
@@ -22,6 +23,11 @@ class SpeechRouter_Cog(commands.Cog):
 	async def on_message(self, message):
 		# Prevent operating on bot messages
 		if message.author.bot:
+			return;
+		if message.guild == None:
+			await optout.optout(message)
+			return;
+		if optout.is_optout(message.author.id):
 			return;
 		# Prevent operating on webhook messages
 		elif message.webhook_id is not None:
@@ -103,10 +109,16 @@ class SpeechRouter_Cog(commands.Cog):
 				logger.info(f'Attempting to restore {perm_type} to {member.name} on {member.guild.name}.')
 
 				await member.add_roles(target_role)
-		
+
+		if optout.is_optout(member.id):
+			return
+
+	
 		# Squeak emoji
 		elif not isinstance(reaction.emoji, str) and reaction.emoji.name == 'Rosasmile':
 			await self.bot.get_cog("Squeak_Cog").on_reaction_add(reaction, member)	
+		elif reaction.emoji in ['🔋','🗝️']:
+			await self.bot.get_cog("Robot_Cog").on_reaction_add(reaction, member)
 		elif reaction.emoji in ['🔓','🔒','🐾','🔑']:
 			await self.bot.get_cog("Feral_Cog").on_reaction_add(reaction, member)
 		elif reaction.emoji in ['🎈','💬']:
@@ -118,10 +130,11 @@ class SpeechRouter_Cog(commands.Cog):
 		if member.id == self.bot.user.id:
 			return
 
+		if optout.is_optout(member.id):
+			return
+
 		if reaction.emoji in ['🔓','🔒','🐾','🔑']:
 			await self.bot.get_cog("Feral_Cog").on_reaction_remove(reaction, member)
 
 
 async def setup(bot):
-	await bot.add_cog(SpeechRouter_Cog(bot))
-

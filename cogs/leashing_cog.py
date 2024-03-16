@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import SyncWebhook
 from discord import app_commands
 import configparser
@@ -48,6 +49,10 @@ class Leashing_Cog(commands.Cog):
 			await inter.response.send_message('*limit-breaks so hard it crashes your game*')
 			return
 
+		if optout.is_optout(target_member.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
+
 		if holder == None:
 			holder = inter.user
 
@@ -64,7 +69,7 @@ class Leashing_Cog(commands.Cog):
 			# Remove existing leash
 			if target_member.id in leash_mapping.users_leashed and holder.id == leash_mapping.leash_holder:
 				await self.remove_user_from_leash(inter.guild, holder, target_member)
-				await inter.response.send_message(f"Removed leash from {target_member.display_name}")
+				await inter.channel.send(f"Removed leash from {target_member.display_name}")
 				return
 			# Remove from existing leash, add the new leash
 			elif target_member.id in leash_mapping.users_leashed and holder.id != leash_mapping.leash_holder:
@@ -75,17 +80,17 @@ class Leashing_Cog(commands.Cog):
 
 
 		await self.add_user_to_leash(inter.guild, inter.channel, holder, target_member)
-		await inter.response.send_message(f"Leashed {target_member.display_name}")
+		await inter.channel.send(f"Leashed {target_member.display_name}")
 
 	@app_commands.command(description='Remove all self-held leashes (may time out interaction - run twice!)')
 	async def leash_removeall(self, inter: discord.Interaction):
 		await self.remove_all_users_from_leash(inter.guild, inter.user)
-		await inter.response.send_message(f"Removed all leashes")
+		await inter.channel.send(f"Removed all leashes")
 
 	@app_commands.command(description='Remove all leashes held by another user (may time out interaction - run twice!)')
 	async def leash_removeall_admin(self, inter: discord.Interaction, holder: discord.Member):
 		await self.remove_all_users_from_leash(inter.guild, holder)
-		await inter.response.send_message(f"Removed all leashes for {holder.display_name}")
+		await inter.channel.send(f"Removed all leashes for {holder.display_name}")
 
 
 	# Print leashed users

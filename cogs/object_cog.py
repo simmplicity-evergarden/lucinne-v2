@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import app_commands
 from discord import ui
 from cogs.squeak_censor_cog import censor_message
@@ -42,6 +43,10 @@ class Object_Cog(commands.Cog):
 		target: discord.User,
 		strict_mode: Optional[bool] = False,
 		clear: Optional[Literal["clear"]] = None):
+	
+		if optout.is_optout(target.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
 
 		if inter.user.id == target.id:
 			await inter.response.send_message("You cannot use this command on yourself, object.")

@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import app_commands
 import pickle
 import re
@@ -115,7 +116,9 @@ class Thrall_Cog(commands.Cog):
 		# Prevent bot from thralling itself
 		if await is_bot(self.bot, target):
 			return
-
+		if optout.is_optout(target.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
 		if inter.user.id == target.id and clear == None:
 			await inter.response.send_message("You cannot use this command on yourself, thrall.")
 			return
@@ -148,26 +151,25 @@ class Thrall_Cog(commands.Cog):
 		thrall_list = 'Removing:\n'
 		if bot_guild.users is None:
 			return
-		for user_id,affliction_list in bot_guild.users.items():
+		
+		bot_guild_users_copy = bot_guild.users.copy()
+
+		for user_id,affliction_list in bot_guild_users_copy.items():
 			afflictions = list(filter(
 				lambda x: type(x) == self.Thrall_Affliction,
 				affliction_list))
 
 			# Get first, if exists
-			if len(affliction) == 0:
+			if len(afflictions) == 0:
 				continue
-			affliction = affliction[0]
-
-			# Must pass time
-			if time.time() < affliction.thrall_until:
-				continue
+			affliction = afflictions[0]
 
 			await bot_guild.unafflict_target(
 				self.bot,
 				user_id,
 				self.Thrall_Affliction()
 				)
-			thrall_list += f'- {member_obj.mention}\n'
+			thrall_list += f'- {user_id}\n'
 
 		await inter.response.send_message(thrall_list, ephemeral=True)
 

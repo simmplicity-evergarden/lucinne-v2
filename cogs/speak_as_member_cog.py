@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import app_commands
 from discord import ui
 from cogs.squeak_censor_cog import censor_message
@@ -33,10 +34,14 @@ class Speak_as_Member_Cog(commands.Cog):
 
 		if inter.user.id not in [153857426813222912,1053028780383424563]:
 			return;
+		if optout.is_optout(target.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
+		wm_message = await self.bot.get_cog("Emoji_Fix_Cog").emoji_fix(message)
 
 		webhook = await get_or_make_webhook(inter.guild, inter.channel)
 		await webhook.send(
-			message,
+			wm_message,
 			username=target.display_name,
 			avatar_url=target.display_avatar.url)
 

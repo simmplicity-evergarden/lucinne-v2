@@ -84,15 +84,19 @@ class Configuration_Cog(commands.Cog):
 
 		response = "The following is a list of users and their afflictions. This list does not represent any internal order of how items are applied.\n**User Statuses**\n"
 		# For user in guild
-		for user_id,afflictions_list in bot_guild.users.items():
+		for user_id,afflictions_list in bot_guild.users.copy().items():
 			
 			# Error check - maximum length is 2000 char
 			if len(response) > 1500:
 				await inter.user.send(response)
 				response = ""
 
+			try: 
+				user = await find_member(self.bot, user_id, inter.guild.id)
+			except:
+				del bot_guild.users[user_id]
+				continue
 
-			user = await find_member(self.bot, user_id, inter.guild.id)
 			response += f"- {user.display_name} ({user.name})\n"
 			# For affliction on user
 			for affliction in afflictions_list:

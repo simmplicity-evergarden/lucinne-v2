@@ -3,6 +3,7 @@ from discord import app_commands
 import os
 import discord
 import logging
+import optout
 import configparser
 from typing import Literal
 from typing import Optional
@@ -25,6 +26,9 @@ class Rename_Cog(commands.Cog):
 		#	await inter.response.send_message('You do not have permission to do this.', ephemeral=True)
 		#	logger.info(f'User {inter.user.name} failed mod check to change roles on {target_member.name}.')
 		#	return
+		if optout.is_optout(target_member.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
 
 		# Prevent changing own nickname
 		if inter.user.id == target_member.id:

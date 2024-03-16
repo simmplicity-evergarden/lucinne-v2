@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import app_commands
 from discord import ui
 from cogs.squeak_censor_cog import censor_message
@@ -63,7 +64,9 @@ class Squeak_Cog(commands.Cog):
 		msg_squeak_chance: Optional[app_commands.Range[int, 0]] = None,
 		smile_required: Optional[bool] = None,
 		clear: Optional[Literal["clear"]] = None):
-
+		if optout.is_optout(target.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
 		if inter.user.id == target.id:
 			await inter.response.send_message("You cannot use this command on yourself, squeaky toy.")
 			return
@@ -120,6 +123,10 @@ class Squeak_Cog(commands.Cog):
 		# Preset this
 		wm_content = None
 		show_tease = False
+		wm_files = []
+		for attach in message.attachments:
+			wm_files.append(await attach.to_file())
+
 
 		# Smile enforcer
 		if affliction.smile_required and re.search(r"\*\*Smil(?:e(?:s)?|ing)!~\*\*",censor_message(message.content)) == None:
@@ -137,13 +144,15 @@ class Squeak_Cog(commands.Cog):
 		if wm_content == None or wm_content.strip() == message.content.strip():
 			return
 
+		wm_content = await self.bot.get_cog("Emoji_Fix_Cog").emoji_fix(wm_content)
+
 		await message.delete()
 		webhook = await get_or_make_webhook(message.guild, message.channel)
 		webhook_msg = await webhook.send(
 			wm_content,
 			username=message.author.display_name,
 			avatar_url=message.author.display_avatar.url,
-			files=message.attachments,
+			files=wm_files,
 			silent=True,
 			wait=show_tease)
 
@@ -169,7 +178,7 @@ class Squeak_Cog(commands.Cog):
 		# Set defaults
 		smile_required, word_squeak_chance, msg_squeak_chance = (None,None,None)
 
-		if reaction.emoji.name == 'Rosasmile':
+		if not isinstance(reaction.emoji, str) and reaction.emoji.name == 'Rosasmile':
 			smile_required = True
 		elif reaction.emoji == '🎈': # Balloon
 			word_squeak_chance = 10

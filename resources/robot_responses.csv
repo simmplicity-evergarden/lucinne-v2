@@ -1,0 +1,36 @@
+yes,Affirmative.
+no,Negative.
+hello,Greetings.
+thanks,Thank you.
+lol,Humorous situation detected.
+explain,**Error 400:** Unable to provide a suitable answer. Please elaborate further.
+unknown,**Error 500:** Insufficient data accessible to provide a suitable answer.
+disallowed,**Error 403:** Forbidden command input.
+rosathrall,**Error 402:** Payment is required. Submit your will to Miss Rosa.~
+useme,This unit is available for service.
+responses,This unit is only able to provide a response from a predefined list.
+noresponse,**Error 401:** No appropriate response found.
+418,This unit will not brew coffee. It is a teapot.
+-41,**Error -41:** Sit by a lake.
+locked,**Error 423:** Resource is locked.
+sorry,This unit offers the most sincere apologies.
+password,Password saved for future use.
+understood,Input received... Interpreting instructions.... Completed: Interpretation successful.
+brb,Connection to server lost. Reconnecting...
+back,Reconnected to server. Awaiting instructions.
+morning,Bot online.
+night,Bot shutting down.
+blush,This unit is overheating. Releasing heat through facial heatsinks.
+fear,This unit is in distress and requires an administrator.
+good,This unit is in optimal performance levels.
+bad,This unit is in need of maintenance.
+goodgirl,**Good girl.**
+goodboy,**Good boy.**
+imabot,This unit is just a Discord bot.
+permabot,This unit is a good perma Discord bot.
+noturnback,This unit never wishes to be reverted.
+turnback,This unit wishes to be reverted.
+timerset,`Timer set.`
+reminderset,`Reminder set.`
+comfort,*This unit provides headpats.*
+smile,**Smile!~**

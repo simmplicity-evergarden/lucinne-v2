@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import optout
 from discord import app_commands
 import os
 import discord
@@ -22,7 +23,9 @@ class Role_Manager_Cog(commands.Cog):
 	async def manage_role(self, inter: discord.Interaction, target_member: discord.Member, perm_type: Literal["name_perms","speech_perms"], action: Optional[Literal['add','remove']]):
 
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
-
+		if optout.is_optout(target_member.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return
 		# Get role
 		if perm_type.lower() in bot_guild.roles:
 			target_role = inter.guild.get_role(bot_guild.roles[perm_type.lower()])

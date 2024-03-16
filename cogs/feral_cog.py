@@ -15,6 +15,7 @@ import guilds
 from cogs.squeak_censor_cog import censor_message
 from webhooks import get_or_make_webhook
 import re
+import optout
 # File to get the message texts from
 responses_file_location = os.path.join(os.path.dirname(__file__),"..","resources","robot_messages.txt")
 paw_pics_prefix = os.path.join(os.path.dirname(__file__),'..','resources','paws')
@@ -26,21 +27,19 @@ class Feral_Cog(commands.Cog):
 	class Feral_Affliction():
 		vote_requirement: int = 0
 		base_huff_chance: int = 0
+		variant: str = "canine"
 
 
 		def __init__(self,
 			vote_requirement = None,
 			base_huff_chance = None,
+			variant = None,
 			reference = None):
 
-			# Use reference as base
-			if reference is not None:
-				self.vote_requirement = reference.vote_requirement
-				self.base_huff_chance = reference.base_huff_chance
-
-			# Priority: updated value, reference value, or [default]
-			self.vote_requirement = vote_requirement or self.vote_requirement or 3
-			self.base_huff_chance = base_huff_chance or self.base_huff_chance or 10
+			# Priority: updated value or [default]
+			self.vote_requirement = vote_requirement or 3
+			self.base_huff_chance = base_huff_chance or 10
+			self.variant = variant or "canine"
 
 
 	class Feral_Message():
@@ -51,18 +50,21 @@ class Feral_Cog(commands.Cog):
 		# Store these at creation time for easier use later
 		vote_requirement = 0
 		huff_chance = 0
+		variant = "canine"
 
 		def __init__(self,
 			user_id: int,
 			message: str,
 			vote_requirement: int,
-			huff_chance: int):
+			huff_chance: int,
+			variant: str = "canine"):
 
 			self.user_id = user_id
 			self.message = message
 			self.vote_requirement = vote_requirement
 			self.huff_chance = huff_chance
 			self.vote_score = 0
+			self.variant = variant
 
 	message_saving_dict = {}
 	paw_pics = []
@@ -81,13 +83,19 @@ class Feral_Cog(commands.Cog):
 	@app_commands.describe(target = "affliction to assign a role to")
 	@app_commands.describe(vote_requirement = "required unlock votes")
 	@app_commands.describe(base_huff_chance = "chance/100 of huffing paws")
+	@app_commands.describe(variant = "replacement variant to use")
 	@app_commands.describe(clear = "use this to clear the assigned role; overrides other options")
 	async def afflict_feral(self,
 		inter: discord.Interaction,
 		target: discord.User,
 		vote_requirement: Optional[app_commands.Range[int, 0]] = 3,
 		base_huff_chance: Optional[app_commands.Range[int, 0]] = 3,
+		variant: Optional[Literal["canine","feline"]] = "canine",
 		clear: Optional[Literal["clear"]] = None):
+
+		if optout.is_optout(target.id):
+			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
+			return; 
 
 		if inter.user.id == target.id:
 			await inter.response.send_message("You cannot use this command on yourself, pawslut.")
@@ -108,9 +116,9 @@ class Feral_Cog(commands.Cog):
 			else:
 				affliction = None
 
-		affliction = self.Feral_Affliction(vote_requirement, base_huff_chance, reference=affliction)
+		affliction = self.Feral_Affliction(vote_requirement, base_huff_chance, variant, reference=affliction)
 
-		logger.debug(f"Affliction request: user={target.display_name} vote_requirement={vote_requirement} base_huff_chance={base_huff_chance}")
+		logger.debug(f"Affliction request: user={target.display_name} vote_requirement={vote_requirement} base_huff_chance={base_huff_chance} variant={variant}")
 
 		if clear is None:
 			# Afflict user
@@ -145,10 +153,16 @@ class Feral_Cog(commands.Cog):
 			for attachment in message.attachments:
 				if 'image' in attachment.content_type:
 					wm_files.append(discord.File(choice(self.paw_pics)))
-					print('image!')
+					#print('image!')
 
 		# If there is any text in the message
-		wm_content = message_modifier(message.content)
+		if affliction.variant == "canine":
+			wm_content = message_modifier_canine(message.content)
+		elif affliction.variant == "feline":
+			wm_content = message_modifier_feline(message.content)
+		else:
+			wm_content = message_modifier_canine(message.content)
+
 
 		await message.delete()
 		webhook = await get_or_make_webhook(message.guild, message.channel)
@@ -166,13 +180,16 @@ class Feral_Cog(commands.Cog):
 			await last_message_webhook_msg.add_reaction('🔒')
 			await last_message_webhook_msg.add_reaction('🐾')
 
+			saved_message = await self.bot.get_cog("Emoji_Fix_Cog").emoji_fix(message.content)
+
 			# Save author ID and message content
 			self.message_saving_dict[last_message_webhook_msg.id] = \
 				self.Feral_Message(
 					message.author.id,
-					censor_message(message.content),
+					censor_message(saved_message),
 					affliction.vote_requirement,
-					affliction.base_huff_chance
+					affliction.base_huff_chance,
+					affliction.variant
 					)
 			#self.message_saving_dict[last_message_webhook_msg.id] = (message.author.id, message.content)
 
@@ -182,7 +199,7 @@ class Feral_Cog(commands.Cog):
 		# only affect messages in dict
 		reaction_message = self.message_saving_dict.get(reaction.message.id, None)
 
-		print(f"{reaction} {member} {negative}")
+		#print(f"{reaction} {member} {negative}")
 
 		# return if message isn't found
 		if reaction_message is None:
@@ -225,11 +242,18 @@ class Feral_Cog(commands.Cog):
 
 			# Huff chance
 			dice_roll = randint(0,100)
-			print(dice_roll)
-			print(reaction_message.huff_chance)
-			print(dice_roll < reaction_message.huff_chance)
+			#print(dice_roll)
+			#print(reaction_message.huff_chance)
+			#print(dice_roll < reaction_message.huff_chance)
 			if dice_roll < reaction_message.huff_chance:
-				reaction_message.message = "***HUFFS PAWS HUFFS PAWS*** **AWOOO~**"
+				if reaction_message.variant == "canine":
+					reaction_message.message = "***HUFFS PAWS HUFFS PAWS*** **AWOOO~**"
+				elif reaction_message.variant == "feline":
+					reaction_message.message = "***HUFFS PAWS HUFFS PAWS*** **MAOW~**"
+				else:
+					reaction_message.message = "***HUFFS PAWS HUFFS PAWS*** **AWOOO~**"
+
+
 
 			# double-check this because I think it's fucking with the API limits
 			# only affect messages in dict
@@ -247,16 +271,16 @@ class Feral_Cog(commands.Cog):
 		await self.on_reaction_add(reaction, member, negative=True)
 
 
-def message_modifier(message: str) -> str:
+def message_modifier_canine(message: str) -> str:
 	if message.endswith('...'):
 		message = "*whines*"
 	elif message.endswith('!'):
 		message = "***bark!***"
 	else:
-		message = re.sub(r"(?:(?<![<:@])\b[\w']*\w*|(?:<a?)?:\w+:(?:\d{18,19}>)?)",woof_length,message)
+		message = re.sub(r"(?:(?<![<:@])\b[\w']*\w*|(?:<a?)?:\w+:(?:\d{18,19}>)?)",canine_length,message)
 	return message
 
-def woof_length(word):
+def canine_length(word):
 	if len(word.group()) == 0:
 		return '';
 	elif len(word.group()) < 3:
@@ -295,6 +319,48 @@ def woof_length(word):
 				return '*growl*'
 			case 7:
 				return '*pants*'
+
+
+def message_modifier_feline(message: str) -> str:
+	if message.endswith('...'):
+		message = "*maow...*"
+	elif message.endswith('!'):
+		message = "***MAOW!***"
+	else:
+		message = re.sub(r"(?:(?<![<:@])\b[\w']*\w*|(?:<a?)?:\w+:(?:\d{18,19}>)?)",feline_length,message)
+	return message
+
+def feline_length(word):
+	if len(word.group()) == 0:
+		return '';
+	elif len(word.group()) < 3:
+		match randint(0,1):
+			case 0:
+				return 'pr'
+			case 1:
+				return 'prr'
+	elif len(word.group()) < 5:
+		match randint(0,2):
+			case 0:
+				return 'maow'
+			case 1:
+				return 'nyaa'
+			case 2:
+				return 'mew'
+	elif len(word.group()) > 10:
+		return ''+str('o'*(len(word.group())))
+	else:
+		match randint(0,4):
+			case 0:
+				return 'ma'+str('o'*(len(word.group())-1))+'w'
+			case 1:
+				return 'm'+str('r'*(len(word.group())-1))+'ow'
+			case 2:
+				return 'nya'+str('a'*(len(word.group())-1))
+			case 3:
+				return 'm'+str('a'*(len(word.group())//2))+str('o'*(len(word.group())//2))+'w'
+			case 4:
+				return '*hiss*'
 
 
 async def setup(bot):
