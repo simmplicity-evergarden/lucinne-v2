@@ -1,14 +1,9 @@
 import bot
-import discord
 import logging
 import logging.handlers
 import os.path
 from os import getenv
-
 from dotenv import load_dotenv
-
-
-
 
 def main():
 	# Load env variables

@@ -1,14 +1,11 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 import optout
 from discord import app_commands
-from discord import ui
 from cogs.squeak_censor_cog import censor_message
 import re
-import os
 import discord
 import logging
 #from random import randint
-from random import choices
 from random import randint
 from typing import Literal
 from typing import Optional
@@ -19,33 +16,17 @@ from webhooks import get_or_make_webhook
 logger = logging.getLogger('bot.squeak')
 
 class Squeak_Cog(commands.Cog):
-	class Squeak_Affliction():
-		smile_required: bool = None
-		word_squeak_chance: int = None
-		msg_squeak_chance: int = None
-
-		def __init__(self,
-			smile_required = None,
-			word_squeak_chance = None,
-			msg_squeak_chance = None,
-			reference = None):
-
-			# Use reference as base
-			if reference is not None:
-				self.smile_required = reference.smile_required
-				self.word_squeak_chance = reference.word_squeak_chance
-				self.msg_squeak_chance = reference.msg_squeak_chance
-
-			# Priority: updated value, reference value, or [default]
-			self.smile_required = smile_required or self.smile_required or False
-			self.word_squeak_chance = word_squeak_chance or self.word_squeak_chance or 0
-			self.msg_squeak_chance = msg_squeak_chance or self.msg_squeak_chance or 0
-
-			# If all three are down, ultimate default
-			if not self.smile_required and self.word_squeak_chance == 0 and self.msg_squeak_chance == 0:
-				self.word_squeak_chance = 10
-
-
+	def Squeak_Affliction(self,
+		smile_required = False,
+		word_squeak_chance = 0,
+		msg_squeak_chance = 0):
+		return {
+			"affliction_type": "squeak",
+			"smile_required": smile_required or False,
+			"word_squeak_chance": word_squeak_chance or 0,
+			"msg_squeak_chance": msg_squeak_chance or 0
+		}
+	
 	def __init__(self, bot):
 		self.bot = bot
 		# Load config
@@ -74,12 +55,12 @@ class Squeak_Cog(commands.Cog):
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 
 		affliction = None
-		if bot_guild.users.get(target.id, None) is not None:
+		if bot_guild["users"].get(target.id, None) is not None:
 			# Filter first
 			affliction = list(filter(
-				lambda x: type(x).__name__ == self.Squeak_Affliction.__name__,
-				bot_guild.users[target.id]
-			));
+				lambda x: x["affliction_type"] == "squeak",
+				bot_guild["users"][target.id]
+			))
 			# Get first, if exists
 			if len(affliction) != 0:
 				affliction = affliction[0]
@@ -87,19 +68,19 @@ class Squeak_Cog(commands.Cog):
 				affliction = None
 
 
-		affliction = self.Squeak_Affliction(smile_required, word_squeak_chance, msg_squeak_chance, reference=affliction)
+		affliction = self.Squeak_Affliction(smile_required, word_squeak_chance, msg_squeak_chance)
 
 		logger.debug(f"Affliction request: user={target.display_name} smile_required={smile_required} " +\
 			f"word_squeak_chance={word_squeak_chance} msg_squeak_chance={msg_squeak_chance}")
 
 		if clear is None:
 			# Afflict user
-			await bot_guild.afflict_target(self.bot, target, affliction)
+			await guilds.afflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully afflicted {target.name}.", ephemeral=True)
 
 		else:
 			# Afflict user
-			await bot_guild.unafflict_target(self.bot, target, affliction)
+			await guilds.unafflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully cleared afflicted {target.name}.", ephemeral=True)
 
 
@@ -107,13 +88,13 @@ class Squeak_Cog(commands.Cog):
 	async def on_message(self, message):
 
 		# Get user's affliction settings
-		user_list = guilds.bot_guilds[str(message.guild.id)].users
+		user_list = guilds.bot_guilds[str(message.guild.id)]["users"]
 		# To get here, the user must already have the setting,
 		# so we can almost guarantee it's in the list
 		affliction = next(filter(
-			lambda x: type(x).__name__ == self.Squeak_Affliction.__name__,
+			lambda x: x["affliction_type"] == "squeak",
 			user_list[message.author.id]
-		));
+		))
 
 		# Allow Rosa sticker
 		for sticker in message.stickers:
@@ -129,19 +110,19 @@ class Squeak_Cog(commands.Cog):
 
 
 		# Smile enforcer
-		if affliction.smile_required and re.search(r"\*\*Smil(?:e(?:s)?|ing)!~\*\*",censor_message(message.content)) == None:
+		if affliction["smile_required"] and re.search(r"\*\*Smil(?:e(?:s)?|ing)!~\*\*",censor_message(message.content)) is None:
 			# Tease on error, ~5% chance
 			show_tease = randint(0,20) == 1
 			# Replace message
 			wm_content = squeak_message(censor_message(message.content), chance=100)
 		# Full sentence replacer
-		elif randint(0,99) < affliction.msg_squeak_chance:
+		elif randint(0,99) < affliction["msg_squeak_chance"]:
 			wm_content = squeak_message(censor_message(message.content), chance=100)
 		else:
-			wm_content = squeak_message(censor_message(message.content), chance=affliction.word_squeak_chance)
+			wm_content = squeak_message(censor_message(message.content), chance=affliction["word_squeak_chance"])
 
 		# Avoid unnecessary replacements or deletions.
-		if wm_content == None or wm_content.strip() == message.content.strip():
+		if wm_content is None or wm_content.strip() == message.content.strip():
 			return
 
 		wm_content = await self.bot.get_cog("Emoji_Fix_Cog").emoji_fix(wm_content)
@@ -167,11 +148,11 @@ class Squeak_Cog(commands.Cog):
 		# Get pre-existing affliction, if it exists
 		affliction = None
 		bot_guild = guilds.bot_guilds[str(reaction.message.guild.id)]
-		if bot_guild.users.get(member.id, None) is not None:
+		if bot_guild["users"].get(member.id, None) is not None:
 			affliction = next(filter(
-				lambda x: type(x).__name__ == self.Squeak_Affliction.__name__,
-				bot_guild.users[member.id]
-			));
+				lambda x: x["affliction_type"] == "squeak",
+				bot_guild["users"][member.id]
+			))
 
 		print("")
 
@@ -186,13 +167,13 @@ class Squeak_Cog(commands.Cog):
 			msg_squeak_chance = 10
 
 		# Create new affliction
-		affliction = self.Squeak_Affliction(smile_required, word_squeak_chance, msg_squeak_chance, reference=affliction)
+		affliction = self.Squeak_Affliction(smile_required, word_squeak_chance, msg_squeak_chance)
 
 		logger.debug(f"Affliction request: user={member.display_name} smile_required={smile_required} " +\
 			f"word_squeak_chance={word_squeak_chance} msg_squeak_chance={msg_squeak_chance}")
 
 		# Afflict user
-		await bot_guild.afflict_target(self.bot, member, affliction)
+		await guilds.afflict_target(bot_guild, self.bot, member, affliction)
 
 
 def squeak_message(message, chance=0) -> str:
@@ -207,7 +188,7 @@ def squeak_message(message, chance=0) -> str:
 
 def squeak_word(word) -> str:
 	if len(word) == 0:
-		return '';
+		return ''
 	elif len(word) < 3:
 		return 'sqk'
 	elif len(word) < 5:

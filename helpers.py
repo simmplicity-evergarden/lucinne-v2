@@ -1,6 +1,6 @@
 # Various helper functions
 import discord
-from settings import *
+#from settings import *
 from typing import Union
 
 # returns member object, including cache miss
@@ -10,7 +10,7 @@ async def find_member(bot: discord.Client, user_param: Union[int, discord.Member
 		guild = bot.get_guild(guild_id)
 		user = guild.get_member(user_param)
 		# Cache miss
-		if user == None:
+		if user is None:
 			user = await guild.fetch_member(user_param)
 	# If already a member obj
 	elif isinstance(user_param, discord.Member):
@@ -20,20 +20,20 @@ async def find_member(bot: discord.Client, user_param: Union[int, discord.Member
 		guild = bot.get_guild(guild_id)
 		user = guild.get_member(user_param.id)
 		# Cache miss
-		if user == None:
+		if user is None:
 			user = await guild.fetch_member(user_param.id)
 
 	return user
 
 # returns true if the user is either mod or admin
-async def is_privileged(bot: discord.Client, user_param: Union[int, discord.Member, discord.User], guild_id: int):
-	mod_status = await has_role(bot, config.getint('roles','mod_role'), user_param)
-	mod_status = mod_status or await has_role(bot, config.getint('roles','admin_role'), user_param)
-	return mod_status
+#async def is_privileged(bot: discord.Client, user_param: Union[int, discord.Member, discord.User], guild_id: int):
+#	mod_status = await has_role(bot, config.getint('roles','mod_role'), user_param)
+#	mod_status = mod_status or await has_role(bot, config.getint('roles','admin_role'), user_param)
+#	return mod_status
 
 # returns true if the user is either mod or admin
-async def is_meanie(bot: discord.Client, user_param: Union[int, discord.Member, discord.User], guild_id: int):
-	return await has_role(bot, config.getint('roles','meanie_role'), user_param)
+#async def is_meanie(bot: discord.Client, user_param: Union[int, discord.Member, discord.User], guild_id: int):
+#	return await has_role(bot, config.getint('roles','meanie_role'), user_param)
 
 # returns true if the user is simm
 async def is_simm(user_param: Union[int, discord.Member, discord.User]):

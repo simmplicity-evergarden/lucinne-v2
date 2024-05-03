@@ -12,6 +12,6 @@ async def optout(message: discord.Message):
 	
 
 def is_optout(user: Union[int, str]):
-	if type(user) == int:
+	if isinstance(user,int):
 		user = str(user)
 	return user in optouts

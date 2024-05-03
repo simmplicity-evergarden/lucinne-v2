@@ -34,6 +34,7 @@ async def on_ready():
 	await bot.load_extension("cogs.feral_cog")
 	await bot.load_extension("cogs.squeak_cog")
 	await bot.load_extension("cogs.object_cog")
+	await bot.load_extension("cogs.mint_cog")
 	await bot.load_extension("cogs.router")
 	await bot.load_extension("cogs.squeak_censor_cog")
 	await bot.load_extension("cogs.leashing_cog")
@@ -41,6 +42,7 @@ async def on_ready():
 	await bot.load_extension("cogs.speak_as_member_cog")
 	await bot.load_extension("cogs.silly")
 	await bot.load_extension("cogs.shocks")
+	await bot.load_extension("cogs.good")
 	await bot.load_extension("cogs.emoji_fix")
 	sync.start()
 

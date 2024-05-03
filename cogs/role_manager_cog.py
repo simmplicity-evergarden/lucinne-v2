@@ -1,10 +1,8 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 import optout
 from discord import app_commands
-import os
 import discord
 import logging
-import configparser
 from typing import Literal
 from typing import Optional
 import guilds
@@ -27,15 +25,15 @@ class Role_Manager_Cog(commands.Cog):
 			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
 			return
 		# Get role
-		if perm_type.lower() in bot_guild.roles:
-			target_role = inter.guild.get_role(bot_guild.roles[perm_type.lower()])
+		if perm_type.lower() in bot_guild["roles"]:
+			target_role = inter.guild.get_role(bot_guild["roles"][perm_type.lower()])
 		else:
 			await inter.response.send_message('Permission role not defined. Please contact Simm.', ephemeral=True)
 			logger.debug('Permission role not defined. Please contact Simm')
 			return
 
 		# Ready toggle action
-		if action == None:
+		if action is None:
 			if target_role not in target_member.roles:
 				action = 'add'
 			else:
@@ -50,7 +48,7 @@ class Role_Manager_Cog(commands.Cog):
 			# Perform role change
 			if action == 'add':
 				if target_member.id == inter.user.id:
-					await inter.response.send_message(f'You cannot restore your own permissions.', ephemeral=True)
+					await inter.response.send_message('You cannot restore your own permissions.', ephemeral=True)
 					logger.debug(f'{inter.user.name} failed to return their own {perm_type} permissions')
 
 				await target_member.add_roles(target_role)
@@ -64,8 +62,8 @@ class Role_Manager_Cog(commands.Cog):
 				await inter.response.send_message('Error occurred while running command. Please contact server admin.', ephemeral=True)
 				logger.debug(f'Error occurred while {inter.user.name} did {action} action for {perm_type} perm on {target_member.name}. Error info:\n{err}')
 
-	async def return_perms(self, guild: discord.Guild, member: discord.Member):
-		bot_guild = guilds.bot_guilds[str(guild.id)]
+	#async def return_perms(self, guild: discord.Guild, member: discord.Member):
+	#	bot_guild = guilds.bot_guilds[str(guild.id)]
 
 
 async def setup(bot):

@@ -1,6 +1,5 @@
 # Manage webhook caching to avoid excessive API calls
 
-from typing import Union
 import discord
 import logging
 

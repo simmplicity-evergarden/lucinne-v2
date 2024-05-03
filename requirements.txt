@@ -2,3 +2,5 @@ discord.py
 configparser
 requests
 python-dotenv
+dill
+unidecode

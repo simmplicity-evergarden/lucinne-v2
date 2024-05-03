@@ -1,4 +1,4 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 import optout
 from discord import app_commands
 from cogs.squeak_censor_cog import censor_message
@@ -6,8 +6,6 @@ import os
 import discord
 import logging
 import re
-from random import choices
-from random import randint
 from typing import Literal
 from typing import Optional
 import guilds
@@ -25,19 +23,15 @@ responses_type_list = ["robot","doll","emoji"]
 logger = logging.getLogger('bot.robot')
 
 class Robot_Cog(commands.Cog):
-	class Robot_Affliction():
-		pre_message_dict: str = None
-		max_charge: int = None
-		current_charge: int = None
-
-		def __init__(self, 
-			pre_message_dict: str = None,
-			max_charge: int = None):
-
-			# value or [default]
-			self.pre_message_dict = pre_message_dict or None
-			self.max_charge = max_charge or None
-			self.current_charge = max_charge or None
+	def Robot_Affliction(self,
+		pre_message_dict: str = None,
+		max_charge: int = None):
+		return {
+			"affliction_type": "robot",
+			"pre_message_dict": pre_message_dict,
+			"max_charge": max_charge,
+			"current_charge": max_charge,
+		}
 
 	# message_id: int -> user_id: int
 	# used to track who to charge on key/battery reactions
@@ -96,12 +90,12 @@ class Robot_Cog(commands.Cog):
 
 		if clear is None:
 			# Afflict user
-			await bot_guild.afflict_target(self.bot, target, affliction)
+			await guilds.afflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully afflicted {target.name}.", ephemeral=True)
 
 		else:
 			# Afflict user
-			await bot_guild.unafflict_target(self.bot, target, affliction)
+			await guilds.unafflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully cleared afflicted {target.name}.", ephemeral=True)
 
 
@@ -113,13 +107,13 @@ class Robot_Cog(commands.Cog):
 			return
 
 		# Get user's affliction settings
-		user_list = guilds.bot_guilds[str(message.guild.id)].users
+		user_list = guilds.bot_guilds[str(message.guild.id)]["users"]
 		# To get here, the user must already have the setting,
 		# so we can almost guarantee it's in the list
 		affliction = next(filter(
-			lambda x: type(x).__name__ == self.Robot_Affliction.__name__,
+			lambda x: x["affliction_type"] == "robot",
 			user_list[message.author.id]
-		));
+		))
 
 		# Pre-set these
 		wm_message = message.content
@@ -128,18 +122,18 @@ class Robot_Cog(commands.Cog):
 			wm_files.append(await attach.to_file())
 
 		# For pre-programmed messages only.
-		if affliction.pre_message_dict is not None:
+		if affliction["pre_message_dict"] is not None:
 			message_content = message.content.lower()
 			# Asking for help?
 			if 'help' in message_content:
 				help_text = '```'
-				for i in self.pre_messages[affliction.pre_message_dict].keys():
-					help_text += f'{i.ljust(12)} ::: {self.pre_messages[affliction.pre_message_dict][i]}\n'
+				for i in self.pre_messages[affliction["pre_message_dict"]].keys():
+					help_text += f'{i.ljust(12)} ::: {self.pre_messages[affliction["pre_message_dict"]][i]}\n'
 				help_text += '```'
 				await message.author.send(help_text)
 
-			if message_content.strip() in self.pre_messages[affliction.pre_message_dict].keys():
-				wm_message = self.pre_messages[affliction.pre_message_dict][message_content.strip()]
+			if message_content.strip() in self.pre_messages[affliction["pre_message_dict"]].keys():
+				wm_message = self.pre_messages[affliction["pre_message_dict"]][message_content.strip()]
 			else:
 				wm_message = ""
 
@@ -150,13 +144,13 @@ class Robot_Cog(commands.Cog):
 			wm_message = await self.bot.get_cog("Emoji_Fix_Cog").emoji_fix(wm_message)
 
 		# Charge logic
-		if affliction.max_charge is not None:
+		if affliction["max_charge"] is not None:
 
 
 			# If zero charge
-			if affliction.current_charge < 1:
+			if affliction["current_charge"] < 1:
 				# Fix any sub-zero value
-				affliction.current_charge = 0
+				affliction["current_charge"] = 0
 
 				# Message/attachments are gone
 				wm_message = "....."
@@ -166,18 +160,18 @@ class Robot_Cog(commands.Cog):
 			else:
 				# Count number of spaces or dashes
 				# subtract that number
-				affliction.current_charge -= len(re.findall(REGEX_PATTERN, wm_message))
+				affliction["current_charge"] -= len(re.findall(REGEX_PATTERN, wm_message))
 				
 
 			# If very low charge ( under 16% of max )
-			if affliction.current_charge < ( affliction.max_charge // 6):
+			if affliction["current_charge"] < ( affliction["max_charge"] // 6):
 				# Slow message
 				wm_message = re.sub(REGEX_PATTERN, r"\1\1\1\1", wm_message)
 				# Limit to one attachment
 				if len(wm_files) > 0:
 					wm_files = [wm_files[0]]
 			# If low charge ( under 33% of max )
-			elif affliction.current_charge < ( affliction.max_charge // 3):
+			elif affliction["current_charge"] < ( affliction["max_charge"] // 3):
 				# Slow message
 				wm_message = re.sub(REGEX_PATTERN, r"\1\1", wm_message)
 				# Limit to one attachment
@@ -217,10 +211,10 @@ class Robot_Cog(commands.Cog):
 			return
 
 		# Other bots/dolls cannot add charge
-		user_list = guilds.bot_guilds[str(reaction.message.guild.id)].users
-		if member.id in guilds.bot_guilds[str(reaction.message.guild.id)].users:
+		user_list = guilds.bot_guilds[str(reaction.message.guild.id)]["users"]
+		if member.id in guilds.bot_guilds[str(reaction.message.guild.id)]["users"]:
 			if any(map(
-				lambda x: type(x).__name__ == self.Robot_Affliction.__name__,
+				lambda x: x["affliction_type"] == "robot",
 				user_list[member.id]
 				)):
 				return 
@@ -242,20 +236,20 @@ class Robot_Cog(commands.Cog):
 	# add charge to a user points% of max charge
 	def add_charge(self, guild_id: int, user_id: int, points: int):
 		# Get user's affliction settings
-		user_list = guilds.bot_guilds[str(guild_id)].users
+		user_list = guilds.bot_guilds[str(guild_id)]["users"]
 		# To get here, the user must already have the setting,
 		# so we can almost guarantee it's in the list
 		affliction = next(filter(
-			lambda x: type(x).__name__ == self.Robot_Affliction.__name__,
+			lambda x: x["affliction_type"] == "robot",
 			user_list[user_id]
-		));
+		))
 
-		if affliction.max_charge is None:
+		if affliction["max_charge"] is None:
 			return
 
-		affliction.current_charge = min(
-			affliction.max_charge,
-			affliction.current_charge + int(affliction.max_charge * (points/100))
+		affliction["current_charge"] = min(
+			affliction["max_charge"],
+			affliction["current_charge"] + int(affliction["max_charge"] * (points/100))
 			)
 
 async def setup(bot):

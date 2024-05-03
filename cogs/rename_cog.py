@@ -1,12 +1,8 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 from discord import app_commands
-import os
 import discord
 import logging
 import optout
-import configparser
-from typing import Literal
-from typing import Optional
 
 logger = logging.getLogger('bot.renamer')
 

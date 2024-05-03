@@ -1,7 +1,6 @@
 from discord.ext import commands
 import discord
 import logging
-import guilds
 import re
 import requests
 from PIL import Image
@@ -63,13 +62,13 @@ class Emoji_Fix_Cog(commands.Cog):
 		guild = self.bot.get_guild(REFERENCE_SERVER)
 		
 		# Test for generally available emoji
-		if self.bot.get_emoji(int(identifier)) != None:
+		if self.bot.get_emoji(int(identifier)) is not None:
 			#print("Emoji already available - local")
 			return 0
 
 		# Test ref serv
 		emoji = discord.utils.get(guild.emojis, name=identifier)
-		if emoji != None:
+		if emoji is not None:
 			#print("Emoji already available - ref serv")
 			return emoji.id
 		else:
@@ -82,7 +81,7 @@ class Emoji_Fix_Cog(commands.Cog):
 
 		logger.info(f"Adding new emote to ref server: {identifier}")
 
-		if animated == False:
+		if not animated:
 			target = f"https://cdn.discordapp.com/emojis/{identifier}.webp"
 		else: 
 			target = f"https://cdn.discordapp.com/emojis/{identifier}.gif"

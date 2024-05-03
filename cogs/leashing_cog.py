@@ -1,20 +1,11 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 import optout
-from discord import SyncWebhook
 from discord import app_commands
-import configparser
-import pickle
-import re
-import os
 import discord
 import logging
-from string import ascii_uppercase
 #from random import randint
-from random import choices
-from random import choice
-from typing import Literal
 from typing import Optional
-from helpers import *
+from helpers import find_member
 import guilds
 
 
@@ -24,16 +15,16 @@ no_perms = discord.PermissionOverwrite()
 no_perms.view_channel = False
 
 class Leashing_Cog(commands.Cog):
+	def Leash_Mapping(self,
+		leash_holder: int = 0,
+		last_channel: int = 0,
+		users_leashed = []):
 
-	class Leash_Mapping():
-		leash_holder: int = 0
-		last_channel: int = 0
-		users_leashed = []
-
-		def __init__(self, leash_holder, last_channel, users_leashed = []):
-			self.leash_holder = leash_holder
-			self.last_channel = last_channel
-			self.users_leashed = users_leashed
+		return {
+			'leash_holder': leash_holder,
+			'last_channel': last_channel,
+			'users_leashed': users_leashed
+			}
 
 	def __init__(self, bot):
 		self.bot = bot
@@ -53,27 +44,27 @@ class Leashing_Cog(commands.Cog):
 			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
 			return
 
-		if holder == None:
+		if holder is None:
 			holder = inter.user
 
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 		logger.info(f'{inter.user.name} attempts to leash {target_member.name}')
 
 
-		if target_member.id in bot_guild.admins:
+		if target_member.id in bot_guild["admins"]:
 			await inter.response.send_message('*limit-breaks so hard it crashes your game*')
 			return
 
 
-		for holder_id,leash_mapping in bot_guild.leash_map.items():
+		for holder_id,leash_mapping in bot_guild["leash_map"].items():
 			# Remove existing leash
-			if target_member.id in leash_mapping.users_leashed and holder.id == leash_mapping.leash_holder:
+			if target_member.id in leash_mapping["users_leashed"] and holder.id == leash_mapping["leash_holder"]:
 				await self.remove_user_from_leash(inter.guild, holder, target_member)
 				await inter.channel.send(f"Removed leash from {target_member.display_name}")
 				return
 			# Remove from existing leash, add the new leash
-			elif target_member.id in leash_mapping.users_leashed and holder.id != leash_mapping.leash_holder:
-				await self.remove_user_from_leash(inter.guild, find_member(self.bot, leash_mapping.leash_holder, inter.guild), target_member)
+			elif target_member.id in leash_mapping["users_leashed"] and holder.id != leash_mapping["leash_holder"]:
+				await self.remove_user_from_leash(inter.guild, find_member(self.bot, leash_mapping["leash_holder"], inter.guild), target_member)
 				await self.add_user_to_leash(inter.guild, inter.channel, holder, target_member)
 				await inter.response.send_message(f"Stole leash for {target_member.display_name}")
 				return
@@ -85,7 +76,7 @@ class Leashing_Cog(commands.Cog):
 	@app_commands.command(description='Remove all self-held leashes (may time out interaction - run twice!)')
 	async def leash_removeall(self, inter: discord.Interaction):
 		await self.remove_all_users_from_leash(inter.guild, inter.user)
-		await inter.channel.send(f"Removed all leashes")
+		await inter.channel.send("Removed all leashes")
 
 	@app_commands.command(description='Remove all leashes held by another user (may time out interaction - run twice!)')
 	async def leash_removeall_admin(self, inter: discord.Interaction, holder: discord.Member):
@@ -110,25 +101,25 @@ class Leashing_Cog(commands.Cog):
 	async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member):
 		# This should only be called when safewording, so only safewording logic here
 		bot_guild = guilds.bot_guilds[str(reaction.message.guild.id)]
-		for leash_mapping in bot_guild.leash_map.values():
+		for leash_mapping in bot_guild["leash_map"].values():
 			# Remove existing leash
-			if member.id in leash_mapping.users_leashed:
-				await self.remove_user_from_leash(reaction.message.guild, await find_member(self.bot, leash_mapping.leash_holder, reaction.message.guild.id), member)
+			if member.id in leash_mapping["users_leashed"]:
+				await self.remove_user_from_leash(reaction.message.guild, await find_member(self.bot, leash_mapping["leash_holder"], reaction.message.guild.id), member)
 				logger.info(f"Removed {member.name} from leash in {reaction.message.guild.name}")
 				return
 
 	# Alias
 	async def safeword(self, reaction: discord.Reaction, member: discord.Member):
-		await on_reaction_add(reaction, member)
+		await self.on_reaction_add(reaction, member)
 
 	async def remove_all_users_from_leash(self, guild: discord.Guild, leash_holder: discord.Member):
 		# Get list of leashed members
-		leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map.get(leash_holder.id, None)
+		leash_mapping = guilds.bot_guilds[str(guild.id)]["leash_map"].get(leash_holder.id, None)
 		if leash_mapping is None:
 			return
 
 		# Make copy
-		leash_copy = leash_mapping.users_leashed.copy()
+		leash_copy = leash_mapping["users_leashed"].copy()
 
 		# Update all users
 		for user in leash_copy:
@@ -136,26 +127,26 @@ class Leashing_Cog(commands.Cog):
 			await self.fix_channel_perms(guild, guild.channels[0], await find_member(self.bot, user, guild.id), freed=True)
 
 			# Remove user's ID from leashing list
-			leash_mapping.users_leashed.remove(user)
+			leash_mapping["users_leashed"].remove(user)
 
 	async def add_user_to_leash(self, guild: discord.Guild, allowed_channel: discord.channel, leash_holder: discord.Member, target_member: discord.Member):
 		# Get list of leashed members
-		leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map.get(leash_holder.id, None)
+		leash_mapping = guilds.bot_guilds[str(guild.id)]["leash_map"].get(leash_holder.id, None)
 		if leash_mapping is None:
-			guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id] = self.Leash_Mapping(
+			guilds.bot_guilds[str(guild.id)]["leash_map"][leash_holder.id] = self.Leash_Mapping(
 				leash_holder.id, allowed_channel.id, [])
-			leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
+			leash_mapping = guilds.bot_guilds[str(guild.id)]["leash_map"][leash_holder.id]
 
 		# Fix channel permissions for the user
 		await self.fix_channel_perms(guild, allowed_channel, target_member)
 
 		# Remove user's ID from leashing list
-		leash_mapping.users_leashed.append(target_member.id)
+		leash_mapping["users_leashed"].append(target_member.id)
 
 	# Remove a user from a leash
 	async def remove_user_from_leash(self, guild: discord.Guild, leash_holder: discord.Member, target_member: discord.Member):
 		# Get list of leashed members
-		leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map.get(leash_holder.id, None)
+		leash_mapping = guilds.bot_guilds[str(guild.id)]["leash_map"].get(leash_holder.id, None)
 		if leash_mapping is None:
 			return
 
@@ -163,28 +154,29 @@ class Leashing_Cog(commands.Cog):
 		await self.fix_channel_perms(guild, guild.channels[0], target_member, freed=True)
 
 		# Remove user's ID from leashing list
-		leash_mapping.users_leashed.remove(target_member.id)
+		leash_mapping["users_leashed"].remove(target_member.id)
 
 	# Fix channel permissions for all leashed members of a given leash holder
 	async def move_leashed_users(self, guild: discord.Guild, allowed_channel: discord.channel, leash_holder: discord.Member, freed = False):
 		try:
 			# Get list of leashed members
-			leash_mapping = guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
-		except:
+			leash_mapping = guilds.bot_guilds[str(guild.id)]["leash_map"][leash_holder.id]
+		except Exception as err:
+			err
 			return
 
 		# Small check for empty lists
-		if len(leash_mapping.users_leashed) == 0:
-			del guilds.bot_guilds[str(guild.id)].leash_map[leash_holder.id]
+		if len(leash_mapping["users_leashed"]) == 0:
+			del guilds.bot_guilds[str(guild.id)]["leash_map"][leash_holder.id]
 
 
 		# Avoid updating if already in the right place
-		if leash_mapping.last_channel == allowed_channel.id and not freed:
+		if leash_mapping["last_channel"] == allowed_channel.id and not freed:
 			return
 		else:
 			logger.debug(f"moving {leash_holder.display_name}'s leashed users")
-			leash_mapping.last_channel = allowed_channel.id
-			for user in leash_mapping.users_leashed:
+			leash_mapping["last_channel"] = allowed_channel.id
+			for user in leash_mapping["users_leashed"]:
 				await self.fix_channel_perms(guild, allowed_channel, await find_member(self.bot, user, guild.id), freed)
 
 	# Fix channel permissions for an individual member

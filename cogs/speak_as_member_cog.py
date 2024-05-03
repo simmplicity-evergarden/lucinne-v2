@@ -1,18 +1,9 @@
-from discord.ext import tasks, commands
+from discord.ext import commands
 import optout
 from discord import app_commands
-from discord import ui
-from cogs.squeak_censor_cog import censor_message
-import re
-import os
 import discord
 import logging
 #from random import randint
-from random import choices
-from random import randint
-from typing import Literal
-from typing import Optional
-import guilds
 from webhooks import get_or_make_webhook
 # File to get the message texts from
 
@@ -33,7 +24,7 @@ class Speak_as_Member_Cog(commands.Cog):
 		message: str):
 
 		if inter.user.id not in [153857426813222912,1053028780383424563]:
-			return;
+			return
 		if optout.is_optout(target.id):
 			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
 			return

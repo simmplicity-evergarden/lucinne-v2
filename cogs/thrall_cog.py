@@ -1,18 +1,15 @@
 from discord.ext import tasks, commands
 import optout
 from discord import app_commands
-import pickle
-import re
 import os
 import discord
 import time
 import logging
-from string import ascii_uppercase
 #from random import randint
 from random import choice
 from random import randint
 from typing import Literal
-from helpers import *
+from helpers import is_bot
 from typing import Optional
 import guilds
 from webhooks import get_or_make_webhook
@@ -31,17 +28,14 @@ class Thrall_Cog(commands.Cog):
 	# List of mantras
 	mantras = []
 
-	class Thrall_Affliction():
-		thrall_until: int = 0
-		replace_chance: int = 0
-
-		def __init__(self,
-			thrall_until = None,
-			replace_chance = None):
-
-			# Priority: updated value or [default]
-			self.thrall_until = thrall_until or (time.time() + (3600*24*7*52))
-			self.replace_chance = replace_chance or 100
+	def Thrall_Affliction(self,
+		thrall_until = None,
+		replace_chance: int = 100):
+		return {
+			"affliction_type": "thrall",
+			"thrall_until": thrall_until or (time.time() + (3600*24*7*52)),
+			"replace_chance": replace_chance
+		}
 
 	def __init__(self, bot):
 		self.bot = bot
@@ -65,13 +59,13 @@ class Thrall_Cog(commands.Cog):
 
 		# For guild in guild list
 		for guild in guilds.bot_guilds.values():
-			if guild.users is None:
+			if guild["users"] is None:
 				continue
 
-			copy_of_users = dict(guild.users).items()
+			copy_of_users = dict(guild["users"]).items()
 			for user_id,affliction_list in copy_of_users:
 				afflictions = list(filter(
-					lambda x: type(x) == self.Thrall_Affliction,
+					lambda x: x["affliction_type"] == "thrall",
 					affliction_list))
 
 				# Get first, if exists
@@ -80,12 +74,13 @@ class Thrall_Cog(commands.Cog):
 				affliction = afflictions[0]
 
 				# Must pass time
-				if time.time() < affliction.thrall_until:
+				if time.time() < affliction["thrall_until"]:
 					continue
 
 				logger.info(f"Thralldom timeout on {user_id}")
 
-				await guild.unafflict_target(
+				await guilds.unafflict_target(
+					guild,
 					self.bot,
 					user_id,
 					self.Thrall_Affliction()
@@ -99,9 +94,9 @@ class Thrall_Cog(commands.Cog):
 		#	return
 		bot_guild = guilds.bot_guilds[str(inter.guild.id)]
 
-		new_setting = not bot_guild.settings.get(THRALL_ENABLED_KEY, True)
+		new_setting = not bot_guild.get("settings").get(THRALL_ENABLED_KEY, True)
 
-		bot_guild.settings[THRALL_ENABLED_KEY] = new_setting
+		bot_guild["settings"][THRALL_ENABLED_KEY] = new_setting
 
 		await inter.response.send_message(f"global thrall setting is now {new_setting}",ephemeral=True)
 
@@ -119,7 +114,7 @@ class Thrall_Cog(commands.Cog):
 		if optout.is_optout(target.id):
 			await inter.response.send_message("User has opted out of bot.", ephemeral=True)
 			return
-		if inter.user.id == target.id and clear == None:
+		if inter.user.id == target.id and clear is None:
 			await inter.response.send_message("You cannot use this command on yourself, thrall.")
 			return
 
@@ -131,12 +126,12 @@ class Thrall_Cog(commands.Cog):
 
 		if clear is None:
 			# Afflict user
-			await bot_guild.afflict_target(self.bot, target, affliction)
+			await guilds.afflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully afflicted {target.name}.", ephemeral=True)
 
 		else:
 			# Afflict user
-			await bot_guild.unafflict_target(self.bot, target, affliction)
+			await guilds.unafflict_target(bot_guild, self.bot, target, affliction)
 			await inter.response.send_message(f"Successfully cleared afflicted {target.name}.", ephemeral=True)
 
 	# Unthrall all thralls
@@ -149,10 +144,10 @@ class Thrall_Cog(commands.Cog):
 		bot_guild = guilds.bot_guilds[str(inter.guild_id)]
 
 		thrall_list = 'Removing:\n'
-		if bot_guild.users is None:
+		if bot_guild["users"] is None:
 			return
 		
-		bot_guild_users_copy = bot_guild.users.copy()
+		bot_guild_users_copy = bot_guild["users"].copy()
 
 		for user_id,affliction_list in bot_guild_users_copy.items():
 			afflictions = list(filter(
@@ -162,9 +157,9 @@ class Thrall_Cog(commands.Cog):
 			# Get first, if exists
 			if len(afflictions) == 0:
 				continue
-			affliction = afflictions[0]
+			#affliction = afflictions[0]
 
-			await bot_guild.unafflict_target(
+			await guilds.unafflict_target(
 				self.bot,
 				user_id,
 				self.Thrall_Affliction()
@@ -190,8 +185,8 @@ class Thrall_Cog(commands.Cog):
 		bot_guild = guilds.bot_guilds[str(message.guild.id)]
 
 		# If the feature is turned off
-		if not bot_guild.settings.get(THRALL_ENABLED_KEY, True):
-			return;
+		if not bot_guild["settings"].get(THRALL_ENABLED_KEY, True):
+			return
 
 		thrall_duration = 40
 
@@ -199,7 +194,7 @@ class Thrall_Cog(commands.Cog):
 
 		logger.debug(f"Affliction request: user={message.author.display_name} thrall_until={thrall_duration} replace_chance=100")
 
-		await bot_guild.afflict_target(self.bot, message.author, affliction)
+		await guilds.afflict_target(bot_guild, self.bot, message.author, affliction)
 
 
 	# Run message relay
@@ -207,22 +202,22 @@ class Thrall_Cog(commands.Cog):
 
 
 		# Get user's affliction settings
-		user_list = guilds.bot_guilds[str(message.guild.id)].users
+		user_list = guilds.bot_guilds[str(message.guild.id)]["users"]
 		# To get here, the user must already have the setting,
 		# so we can almost guarantee it's in the list
 		affliction = next(filter(
-			lambda x: type(x).__name__ == self.Thrall_Affliction.__name__,
+			lambda x: x["affliction_type"] == "thrall",
 			user_list[message.author.id]
-		));
+		))
 
 		# Run chance
-		if randint(0,99) > affliction.replace_chance:
+		if randint(0,99) > affliction["replace_chance"]:
 			return
 
 		wm_content = self.get_mantra().strip()
 		await message.delete()
 		webhook = await get_or_make_webhook(message.guild, message.channel)
-		webhook_msg = await webhook.send(
+		await webhook.send(
 			wm_content,
 			username=message.author.display_name,
 			avatar_url=message.author.display_avatar.url,
