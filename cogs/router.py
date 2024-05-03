@@ -95,14 +95,14 @@ class SpeechRouter_Cog(commands.Cog):
 		# ignore bot reactions
 		if member.id == self.bot.user.id:
 			return
-		
+		"""	
 		if member.id in [233769716198539264, 1053028780383424563]:
 			if reaction.emoji != "🐾": 
 				await reaction.message.remove_reaction(reaction.emoji, member)
 				return
 			else:
 				return
-
+		"""
 
 		# Remove all afflictions
 		if not isinstance(reaction.emoji, str) and reaction.emoji.name == 'safeword':

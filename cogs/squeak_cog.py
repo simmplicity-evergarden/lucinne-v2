@@ -15,6 +15,10 @@ from webhooks import get_or_make_webhook
 
 logger = logging.getLogger('bot.squeak')
 
+# This is needed for squeaking words properly, unfortunately.
+CURRENT_SQUEAK_CHANCE = 0
+
+
 class Squeak_Cog(commands.Cog):
 	def Squeak_Affliction(self,
 		smile_required = False,
@@ -162,7 +166,7 @@ class Squeak_Cog(commands.Cog):
 		if not isinstance(reaction.emoji, str) and reaction.emoji.name == 'Rosasmile':
 			smile_required = True
 		elif reaction.emoji == '🎈': # Balloon
-			word_squeak_chance = 10
+			word_squeak_chance = 7
 		else: # Speech bubble
 			msg_squeak_chance = 10
 
@@ -176,7 +180,12 @@ class Squeak_Cog(commands.Cog):
 		await guilds.afflict_target(bot_guild, self.bot, member, affliction)
 
 
+# This is still here from a previous version of the bot
 def squeak_message(message, chance=0) -> str:
+	# since re.sub doesn't allow passing things
+	global CURRENT_SQUEAK_CHANCE
+	CURRENT_SQUEAK_CHANCE = chance
+	return re.sub(r"(?:(?<![<:@])\b[\w']*\w*|(?:<a?)?:\w+:(?:\d{18,19}>)?)", squeak_word, message)
 	new_message = ""
 	for word in message.split():
 		if randint(0,100) < chance:
@@ -187,26 +196,28 @@ def squeak_message(message, chance=0) -> str:
 	return new_message.strip()
 
 def squeak_word(word) -> str:
-	if len(word) == 0:
+	if randint(0,100) > CURRENT_SQUEAK_CHANCE:
+		return word.group()
+	if len(word.group()) == 0:
 		return ''
-	elif len(word) < 3:
+	elif len(word.group()) < 3:
 		return 'sqk'
-	elif len(word) < 5:
+	elif len(word.group()) < 5:
 		return 'SQUEAK'
 	else:
 		match randint(0,6):
 			case 0:
-				return 's'+str('q'*(len(word)-1))+'rk'
+				return 's'+str('q'*(len(word.group())-1))+'rk'
 			case 1:
-				return 'squ'+str('i'*(len(word)-1))+'rk'
+				return 'squ'+str('i'*(len(word.group())-1))+'rk'
 			case 2:
-				return 'squ'+str('i'*(len(word)-1))+'sh'
+				return 'squ'+str('i'*(len(word.group())-1))+'sh'
 			case 3:
-				return 'fw'+str('o'*(len(word)-1))+'mp'
+				return 'fw'+str('o'*(len(word.group())-1))+'mp'
 			case 4:
-				return 'fw'+str('w'*(len(word)-1))+'mp'
+				return 'fw'+str('w'*(len(word.group())-1))+'mp'
 			case 5:
-				return 'cr'+str('e'*(len(word)-1))+'ak'
+				return 'cr'+str('e'*(len(word.group())-1))+'ak'
 			case 6:
 				return '**Smile!**'
 			case 7:
