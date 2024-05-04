@@ -48,11 +48,11 @@ async def on_ready():
 
 @bot.event
 async def on_guild_join(guild: discord.Guild):
-	guilds.add_guild(guild)
+	guilds.add_guild(guild.id)
 
 @bot.event
 async def on_guild_remove(guild: discord.Guild):
-	guilds.remove_guild(guild)
+	guilds.remove_guild(guild.id)
 
 @tasks.loop(seconds=30)
 async def sync():
